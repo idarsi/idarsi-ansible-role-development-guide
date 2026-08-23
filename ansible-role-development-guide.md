@@ -59,9 +59,9 @@ The requirements below use these terms:
 - Keep package repository and package-manager controls explicit when a role
   manages an external repository, including certificate, GPG-check, cache,
   retry, and platform-specific interpreter settings where applicable.
-- Use a structured, role-scoped input object such as
-  `iac_blueprint.<service_key>` when the surrounding project uses a blueprint
-  model. Do not require that naming scheme in otherwise standalone roles.
+- Use a structured, role-scoped input object when the surrounding project uses
+  a blueprint model. Do not require a particular naming scheme in otherwise
+  standalone roles.
 
 ## Blueprint and Input Validation
 
@@ -167,6 +167,29 @@ input before running state-specific work.
   `log_write.yml`, so the role's task surface remains explicit and can
   provide role-specific assertions or variables.
 
+### Shared Dependencies
+
+Roles may consume reusable task libraries or other repositories as pinned
+dependencies.
+
+**Required:**
+
+- Keep shared dependencies separate from role-specific behavior and document
+  which functionality comes from each dependency.
+- Treat a dependency checkout inside the role as a pinned revision, not as the
+  primary place to manage that dependency's branches or releases.
+- Update dependency pointers separately from changes to the role that consumes
+  them.
+
+**Recommended:**
+
+- Use a submodule or another reproducible revision-pinning mechanism when the
+  dependency must be available with the role source.
+- Document how contributors initialize dependencies and which dependency
+  revision is expected by the role.
+- Keep role-local wrappers around shared tasks so the role can assert its own
+  inputs and preserve a clear public task surface.
+
 ## Modules, Packages, and Commands
 
 **Required:**
@@ -190,6 +213,56 @@ input before running state-specific work.
 - `ansible.builtin.command` or `ansible.builtin.shell` is acceptable when the
   operational interface is a CLI by design, such as `firewall-cmd`, `podman`,
   `psql`, or task-report logging.
+
+## Security and Sensitive Data
+
+**Required:**
+
+- Do not expose passwords, private keys, tokens, or other sensitive values in
+  task names, assertion messages, generated reports, or ordinary debug output.
+- Use `no_log: true` for tasks whose results or arguments could reveal
+  sensitive values. Keep the protected task scope as narrow as practical.
+- Do not pass secrets on command lines when a module argument, environment
+  variable, file, or supported secret mechanism can avoid exposing them in
+  process listings.
+- Use restrictive ownership and modes for generated files containing secrets,
+  and document the expected permissions.
+
+**Recommended:**
+
+- Use Ansible Vault or the surrounding platform's approved secret store for
+  secret inputs. Keep real credentials out of inventory examples and Molecule
+  fixtures.
+- Use clearly fake credentials in examples and tests, and make it obvious
+  that they are not suitable for production.
+- Check failure paths and logging paths specifically for accidental secret
+  disclosure.
+
+## Check Mode and Diff Mode
+
+Roles should support Ansible's preview workflows whenever the managed
+operation allows it.
+
+**Required:**
+
+- Do not make external or destructive changes during `--check` execution.
+- Do not claim a change occurred when check mode only predicts a change.
+- Document and narrowly guard operations that cannot support check mode, such
+  as vendor CLIs or database actions that have no safe dry-run interface.
+
+**Recommended:**
+
+- Verify representative role states with:
+
+  ```bash
+  ansible-playbook playbook.yml --check --diff
+  ```
+
+- Use diff mode for generated configuration where the diff is safe and useful.
+- Suppress diffs for secret-bearing files and tasks, for example with
+  `diff: false` together with appropriate `no_log` handling.
+- Prefer modules with native check-mode and diff-mode support over shell-based
+  previews.
 
 ## State Semantics and Idempotence
 
@@ -250,7 +323,37 @@ input before running state-specific work.
 - Keep testing documentation aligned with Molecule scenarios and state
   coverage.
 
+### Testing and CI
+
 **Recommended:**
+
+- Divide Molecule scenarios by purpose instead of making one scenario cover
+  every state: use separate scenarios for baseline behavior, validation,
+  lifecycle, destructive cleanup, guardrails, and experimental behavior when
+  those paths are materially different.
+- Document the test matrix, including tested platforms, versions, scenarios,
+  and known coverage gaps. Distinguish supported platforms from platforms
+  that are automatically tested.
+- Provide a CI baseline containing a syntax check, production-profile
+  Ansible Lint, and the relevant Molecule scenarios. Run independent
+  scenarios in parallel when the CI environment allows it.
+- Verify idempotence in normal scenarios and test unsafe or destructive
+  operations with explicit failure and guardrail cases.
+- Keep test-only workarounds, container settings, and fixture credentials in
+  Molecule files. Do not copy them into production inventory examples.
+
+### Documentation Responsibilities
+
+**Recommended:**
+
+- Use `README.md` for role purpose, supported states, input examples, and
+  operator-facing behavior.
+- Use `CONTRIBUTING.md` for change-impact rules, development commands, and
+  contributor workflow.
+- Use `TESTING.md` for the test matrix, scenario purpose, test limitations,
+  and commands for running the suite.
+- Keep inventory examples and state documentation synchronized with the
+  implementation whenever the public role contract changes.
 
 - Document role maturity and known coverage gaps when a role is experimental
   or not yet suitable for unattended production use.
