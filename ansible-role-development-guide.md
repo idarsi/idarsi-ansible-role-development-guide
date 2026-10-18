@@ -5,7 +5,7 @@ IDARSI-ANSIBLE-ROLE-DEVELOPMENT-GUIDE
 **AUTHORS**  
 - Arsi Atomi <arsi@atomi.sh>
 
-# IDARSI Ansible Role Development Guide
+# Idarsi Ansible Role Development Guide
 
 This guide defines conventions for developing reusable, maintainable, and
 testable Ansible roles. It is intentionally independent of a particular
@@ -325,22 +325,20 @@ operation allows it.
 
 ### Testing and CI
 
+**Required:**
+
+- Before presenting a role as production-ready, provide comprehensive
+  automated evidence for its supported platforms, important public states,
+  central features, and destructive-operation guardrails. A single happy-path
+  scenario is not sufficient.
+- Follow the companion [Ansible Role Testing Guide](ansible-role-testing-guide.md)
+  for scenario design, coverage, platform and Ansible version matrices, and
+  `TESTING.md` content.
+
 **Recommended:**
 
-- Divide Molecule scenarios by purpose instead of making one scenario cover
-  every state: use separate scenarios for baseline behavior, validation,
-  lifecycle, destructive cleanup, guardrails, and experimental behavior when
-  those paths are materially different.
-- Document the test matrix, including tested platforms, versions, scenarios,
-  and known coverage gaps. Distinguish supported platforms from platforms
-  that are automatically tested.
-- Provide a CI baseline containing a syntax check, production-profile
-  Ansible Lint, and the relevant Molecule scenarios. Run independent
-  scenarios in parallel when the CI environment allows it.
-- Verify idempotence in normal scenarios and test unsafe or destructive
-  operations with explicit failure and guardrail cases.
-- Keep test-only workarounds, container settings, and fixture credentials in
-  Molecule files. Do not copy them into production inventory examples.
+- Keep pull-request checks fast by reserving broad matrices and expensive
+  scenarios for scheduled or release runs, as described in the Testing Guide.
 
 ### Documentation Responsibilities
 
